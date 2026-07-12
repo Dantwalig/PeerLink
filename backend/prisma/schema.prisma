@@ -1,0 +1,146 @@
+// PeerLink - Prisma schema
+// Modeled directly from the SRS: FR1-FR10 (registration, auth, tutor search,
+// session booking, resource sharing, messaging, study groups, ratings,
+// notifications, dashboard) and section 2.4 Operating Environment
+// (PostgreSQL v14+ for relational data, AWS S3 for file storage).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// FR2.2 Role-Based Access: a user can be a learner and a tutor at once (isTutor flag)
+model User {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           String   @default("STUDENT") // STUDENT | ADMIN
+  isTutor        Boolean  @default(false)
+  isVerified     Boolean  @default(false)
+  verificationToken  String? @unique
+  resetToken         String? @unique
+  resetTokenExpiry   DateTime?
+  faculty        String?
+  yearOfStudy    Int?
+  subjects       String?  // comma-separated subject tags (search/expertise)
+  bio            String?
+  rating         Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  availability      Availability[]
+  sessionsAsStudent TutorSession[]  @relation("StudentSessions")
+  sessionsAsTutor   TutorSession[]  @relation("TutorSessions")
+  resources         Resource[]
+  ratingsGiven      Rating[]        @relation("RatingsGiven")
+  ratingsReceived   Rating[]        @relation("RatingsReceived")
+  groupsCreated     StudyGroup[]
+  groupMemberships  GroupMembership[]
+  messagesSent      Message[]       @relation("MessagesSent")
+  messagesReceived  Message[]       @relation("MessagesReceived")
+  notifications     Notification[]
+}
+
+// FR3 Tutor Search — a tutor lists open time slots
+model Availability {
+  id        String   @id @default(uuid())
+  tutorId   String
+  tutor     User     @relation(fields: [tutorId], references: [id])
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean  @default(false)
+}
+
+// FR4 Session Booking
+model TutorSession {
+  id            String   @id @default(uuid())
+  studentId     String
+  student       User     @relation("StudentSessions", fields: [studentId], references: [id])
+  tutorId       String
+  tutor         User     @relation("TutorSessions", fields: [tutorId], references: [id])
+  subject       String
+  startTime     DateTime
+  endTime       DateTime
+  status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
+  calendarEventId String?  // FR4.2 stub - would hold the Google Calendar event id
+  createdAt     DateTime @default(now())
+  rating        Rating?
+}
+
+// FR5 Resource Sharing
+model Resource {
+  id          String   @id @default(uuid())
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+  title       String
+  course      String
+  subject     String
+  docType     String   // PDF | DOCX | IMAGE
+  fileUrl     String   // STUB: in production this is an S3 URL; demo stores a placeholder
+  createdAt   DateTime @default(now())
+}
+
+// FR7 Study Groups
+model StudyGroup {
+  id          String   @id @default(uuid())
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  name        String
+  description String
+  subjectTag  String
+  memberLimit Int      @default(20)
+  createdAt   DateTime @default(now())
+  memberships GroupMembership[]
+}
+
+model GroupMembership {
+  id        String    @id @default(uuid())
+  groupId   String
+  group     StudyGroup @relation(fields: [groupId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  status    String    @default("PENDING") // PENDING | APPROVED
+  joinedAt  DateTime  @default(now())
+
+  @@unique([groupId, userId])
+}
+
+// FR8 Tutor Rating and Review
+model Rating {
+  id         String   @id @default(uuid())
+  sessionId  String   @unique
+  session    TutorSession @relation(fields: [sessionId], references: [id])
+  fromUserId String
+  fromUser   User     @relation("RatingsGiven", fields: [fromUserId], references: [id])
+  toUserId   String
+  toUser     User     @relation("RatingsReceived", fields: [toUserId], references: [id])
+  score      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+// FR6 Peer Messaging (direct messages; group messaging can reuse this with a groupId later)
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("MessagesSent", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("MessagesReceived", fields: [receiverId], references: [id])
+  content    String
+  sentAt     DateTime @default(now())
+}
+
+// FR9 Notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  message   String
+  isRead    Boolean  @default(false)
+  sentAt    DateTime @default(now())
+}
