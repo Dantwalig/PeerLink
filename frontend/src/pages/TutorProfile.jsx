@@ -6,6 +6,7 @@ export default function TutorProfile() {
   const { id } = useParams();
   const [tutor, setTutor] = useState(null);
   const [subject, setSubject] = useState('');
+  const [location, setLocation] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -20,7 +21,7 @@ export default function TutorProfile() {
     setMessage('');
     if (!subject) { setError('Enter a subject for the session first'); return; }
     try {
-      await api('/sessions', { method: 'POST', body: JSON.stringify({ tutorId: id, availabilityId, subject }) });
+      await api('/sessions', { method: 'POST', body: JSON.stringify({ tutorId: id, availabilityId, subject, location }) });
       setMessage('Session booked and confirmed!');
       load();
     } catch (err) {
@@ -44,6 +45,8 @@ export default function TutorProfile() {
       <div className="card">
         <label>Session subject</label>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Algorithms - Recursion" />
+        <label>Where (optional)</label>
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Zoom link, or e.g. Library, 2nd floor" />
       </div>
 
       <strong>Available time slots</strong>

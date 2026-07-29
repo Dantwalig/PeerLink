@@ -42,6 +42,16 @@ router.get('/', requireAuth, async (req, res) => {
   res.json(resources);
 });
 
+// Distinct list of course codes already in use, for autocomplete on upload/search
+router.get('/courses', requireAuth, async (req, res) => {
+  const rows = await prisma.resource.findMany({
+    distinct: ['course'],
+    select: { course: true },
+    orderBy: { course: 'asc' },
+  });
+  res.json(rows.map((r) => r.course));
+});
+
 // Multer errors (oversized/wrong type) surface with a clean message
 router.use((err, req, res, next) => {
   if (err) return res.status(400).json({ message: err.message });

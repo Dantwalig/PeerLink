@@ -7,7 +7,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [slots, setSlots] = useState([]);
-  const [slotForm, setSlotForm] = useState({ startTime: '', endTime: '' });
+  const [slotForm, setSlotForm] = useState({ startTime: '', endTime: '', repeatWeeks: 1 });
   const [slotMessage, setSlotMessage] = useState('');
 
   useEffect(() => {
@@ -33,10 +33,26 @@ export default function Dashboard() {
         body: JSON.stringify({
           startTime: new Date(slotForm.startTime).toISOString(),
           endTime: new Date(slotForm.endTime).toISOString(),
+          repeatWeeks: Number(slotForm.repeatWeeks) || 1,
         }),
       });
-      setSlotMessage('Availability slot added — students can now book it.');
-      setSlotForm({ startTime: '', endTime: '' });
+      setSlotMessage(
+        slotForm.repeatWeeks > 1
+          ? `Added ${slotForm.repeatWeeks} weekly slots — students can now book them.`
+          : 'Availability slot added — students can now book it.',
+      );
+      setSlotForm({ startTime: '', endTime: '', repeatWeeks: 1 });
+      loadSlots();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeSlot(slot, wholeSeries) {
+    setError('');
+    try {
+      const suffix = wholeSeries && slot.recurrenceGroupId ? '?seriesId=true' : '';
+      await api(`/tutors/availability/${slot.id}${suffix}`, { method: 'DELETE' });
       loadSlots();
     } catch (err) {
       setError(err.message);
@@ -61,16 +77,33 @@ export default function Dashboard() {
             <input type="datetime-local" value={slotForm.startTime} onChange={(e) => setSlotForm({ ...slotForm, startTime: e.target.value })} />
             <label>End time</label>
             <input type="datetime-local" value={slotForm.endTime} onChange={(e) => setSlotForm({ ...slotForm, endTime: e.target.value })} />
-            <button type="submit">Add slot</button>
+            <label>Repeat weekly</label>
+            <select value={slotForm.repeatWeeks} onChange={(e) => setSlotForm({ ...slotForm, repeatWeeks: e.target.value })}>
+              <option value={1}>Just this once</option>
+              <option value={4}>4 weeks</option>
+              <option value={8}>8 weeks</option>
+              <option value={12}>12 weeks</option>
+            </select>
+            <button type="submit">Add slot{slotForm.repeatWeeks > 1 ? 's' : ''}</button>
           </form>
           {slotMessage && <p className="success">{slotMessage}</p>}
           {slots.length > 0 && (
             <div style={{ marginTop: 10 }}>
               {slots.map((s) => (
-                <p key={s.id} className="muted">
-                  {new Date(s.startTime).toLocaleString()} → {new Date(s.endTime).toLocaleTimeString()}
-                  {s.isBooked ? ' (booked)' : ' (open)'}
-                </p>
+                <div key={s.id} className="row" style={{ justifyContent: 'space-between' }}>
+                  <span className="muted">
+                    {new Date(s.startTime).toLocaleString()} → {new Date(s.endTime).toLocaleTimeString()}
+                    {s.isBooked ? ' (booked)' : ' (open)'}
+                  </span>
+                  {!s.isBooked && (
+                    <span className="row">
+                      <button className="secondary" onClick={() => removeSlot(s, false)}>Remove</button>
+                      {s.recurrenceGroupId && (
+                        <button className="secondary" onClick={() => removeSlot(s, true)}>Remove series</button>
+                      )}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           )}

@@ -14,8 +14,17 @@ router.get('/mine', requireAuth, async (req, res) => {
 });
 
 router.patch('/:id/read', requireAuth, async (req, res) => {
+  const notification = await prisma.notification.findUnique({ where: { id: req.params.id } });
+  if (!notification || notification.userId !== req.user.userId) {
+    return res.status(404).json({ message: 'Notification not found' });
+  }
   const updated = await prisma.notification.update({ where: { id: req.params.id }, data: { isRead: true } });
   res.json(updated);
+});
+
+router.patch('/read-all', requireAuth, async (req, res) => {
+  await prisma.notification.updateMany({ where: { userId: req.user.userId, isRead: false }, data: { isRead: true } });
+  res.json({ message: 'All notifications marked read' });
 });
 
 module.exports = router;

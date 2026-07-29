@@ -1,5 +1,6 @@
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { getUser, clearToken } from './lib/api';
+import { useEffect, useState } from 'react';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { api, getUser, clearToken } from './lib/api';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import VerifyEmail from './pages/VerifyEmail';
@@ -10,6 +11,7 @@ import Sessions from './pages/Sessions';
 import Resources from './pages/Resources';
 import Groups from './pages/Groups';
 import Messages from './pages/Messages';
+import Notifications from './pages/Notifications';
 
 function RequireAuth({ children }) {
   const user = getUser();
@@ -19,7 +21,16 @@ function RequireAuth({ children }) {
 
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getUser();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    api('/notifications/mine')
+      .then((list) => setUnread(list.filter((n) => !n.isRead).length))
+      .catch(() => {});
+  }, [location.pathname]);
 
   function logout() {
     clearToken();
@@ -39,6 +50,7 @@ export default function App() {
               <Link to="/resources">Resources</Link>
               <Link to="/groups">Study groups</Link>
               <Link to="/messages">Messages</Link>
+              <Link to="/notifications">Notifications{unread > 0 ? ` (${unread})` : ''}</Link>
               <button onClick={logout}>Log out ({user.name.split(' ')[0]})</button>
             </>
           ) : (
@@ -62,6 +74,7 @@ export default function App() {
           <Route path="/resources" element={<RequireAuth><Resources /></RequireAuth>} />
           <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
+          <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
         </Routes>
       </div>
     </div>

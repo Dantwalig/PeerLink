@@ -34,6 +34,24 @@ real third-party credentials I don't have:
 Everything else - auth, tutor search, session booking, resource metadata,
 study groups, ratings, real-time messaging, the dashboard - runs for real.
 
+## Recently added (quick-win features)
+
+- **Notifications inbox** - a real page at `/notifications`, not just an
+  unread count. Click a notification to mark it read, or "mark all as read."
+  The nav bar shows a live unread count.
+- **Recurring availability** - a tutor can add a slot "just once" or repeat
+  it weekly for 4/8/12 weeks in one action, all sharing a `recurrenceGroupId`.
+  "Remove series" cancels every future slot in that series at once.
+- **Session location field** - sessions can carry a Zoom link or physical
+  location, settable at booking time or edited afterward by either party
+  from the Sessions page.
+- **Course autocomplete on Resources** - upload and filter now use a live
+  `datalist` of every course code already in use, instead of free-typing a
+  code from scratch each time.
+
+All four were verified with a dedicated smoke test against real PostgreSQL
+before being handed off.
+
 ## Setup (do this tonight, not tomorrow morning)
 
 ### 1. PostgreSQL

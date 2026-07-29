@@ -8,7 +8,7 @@ const router = express.Router();
 
 // FR4 Session Booking - student books an open availability slot with a tutor
 router.post('/', requireAuth, async (req, res) => {
-  const { tutorId, availabilityId, subject } = req.body;
+  const { tutorId, availabilityId, subject, location } = req.body;
   if (!tutorId || !availabilityId || !subject) {
     return res.status(400).json({ message: 'tutorId, availabilityId, and subject are required' });
   }
@@ -26,6 +26,7 @@ router.post('/', requireAuth, async (req, res) => {
         startTime: slot.startTime,
         endTime: slot.endTime,
         status: 'CONFIRMED',
+        location: location || null,
       },
     }),
     prisma.availability.update({ where: { id: availabilityId }, data: { isBooked: true } }),
@@ -39,6 +40,22 @@ router.post('/', requireAuth, async (req, res) => {
   await notify(req.user.userId, 'SESSION_CONFIRMED', `Your session "${subject}" is confirmed`);
 
   res.status(201).json(session);
+});
+
+// Either party can set/update where the session happens (Zoom link, room, etc.)
+router.patch('/:id/location', requireAuth, async (req, res) => {
+  const { location } = req.body;
+  const session = await prisma.tutorSession.findUnique({ where: { id: req.params.id } });
+  if (!session) return res.status(404).json({ message: 'Session not found' });
+  if (![session.studentId, session.tutorId].includes(req.user.userId)) {
+    return res.status(403).json({ message: 'You are not part of this session' });
+  }
+
+  const updated = await prisma.tutorSession.update({ where: { id: session.id }, data: { location } });
+  const otherParty = req.user.userId === session.studentId ? session.tutorId : session.studentId;
+  await notify(otherParty, 'SESSION_LOCATION_UPDATED', `Location set for "${session.subject}": ${location}`);
+
+  res.json(updated);
 });
 
 // FR4.1 Session Cancellation

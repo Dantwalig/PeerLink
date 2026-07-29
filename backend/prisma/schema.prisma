@@ -47,12 +47,13 @@ model User {
 
 // FR3 Tutor Search — a tutor lists open time slots
 model Availability {
-  id        String   @id @default(uuid())
-  tutorId   String
-  tutor     User     @relation(fields: [tutorId], references: [id])
-  startTime DateTime
-  endTime   DateTime
-  isBooked  Boolean  @default(false)
+  id                 String   @id @default(uuid())
+  tutorId            String
+  tutor              User     @relation(fields: [tutorId], references: [id])
+  startTime          DateTime
+  endTime            DateTime
+  isBooked           Boolean  @default(false)
+  recurrenceGroupId  String?  // groups slots created together via "repeat weekly", so they can be bulk-managed
 }
 
 // FR4 Session Booking
@@ -66,6 +67,7 @@ model TutorSession {
   startTime     DateTime
   endTime       DateTime
   status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
+  location      String?  // Zoom/Meet link or a physical location, e.g. "Library, 2nd floor"
   calendarEventId String?  // FR4.2 stub - would hold the Google Calendar event id
   createdAt     DateTime @default(now())
   rating        Rating?

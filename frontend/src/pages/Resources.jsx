@@ -5,14 +5,21 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
 
 export default function Resources() {
   const [resources, setResources] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [form, setForm] = useState({ title: '', course: '', subject: '', file: null });
+  const [filterCourse, setFilterCourse] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  function load() {
-    api('/resources').then(setResources).catch((err) => setError(err.message));
+  function load(course) {
+    const params = course ? `?course=${encodeURIComponent(course)}` : '';
+    api(`/resources${params}`).then(setResources).catch((err) => setError(err.message));
   }
-  useEffect(load, []);
+
+  useEffect(() => {
+    load();
+    api('/resources/courses').then(setCourses).catch(() => {});
+  }, []);
 
   async function upload(e) {
     e.preventDefault();
@@ -30,10 +37,16 @@ export default function Resources() {
       await api('/resources', { method: 'POST', body });
       setMessage('Resource uploaded!');
       setForm({ title: '', course: '', subject: '', file: null });
-      load();
+      load(filterCourse);
+      api('/resources/courses').then(setCourses).catch(() => {});
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  function onFilterChange(value) {
+    setFilterCourse(value);
+    load(value);
   }
 
   return (
@@ -47,7 +60,7 @@ export default function Resources() {
           <label>Title</label>
           <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label>Course</label>
-          <input required value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} placeholder="e.g. CS1102" />
+          <input required list="course-options" value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} placeholder="e.g. CS1102" />
           <label>Subject</label>
           <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="e.g. Algorithms" />
           <label>File</label>
@@ -58,6 +71,24 @@ export default function Resources() {
         {error && <p className="error">{error}</p>}
       </div>
 
+      {courses.length > 0 && (
+        <div className="card">
+          <label>Filter by course</label>
+          <input
+            list="course-options"
+            value={filterCourse}
+            onChange={(e) => onFilterChange(e.target.value)}
+            placeholder="Start typing a course code..."
+          />
+          {filterCourse && <button className="secondary" style={{ marginTop: 8 }} onClick={() => onFilterChange('')}>Clear filter</button>}
+        </div>
+      )}
+
+      <datalist id="course-options">
+        {courses.map((c) => <option key={c} value={c} />)}
+      </datalist>
+
+      {resources.length === 0 && <p className="muted">No resources match yet.</p>}
       {resources.map((r) => (
         <div className="card" key={r.id}>
           <div className="row" style={{ justifyContent: 'space-between' }}>

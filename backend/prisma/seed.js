@@ -1,4 +1,5 @@
 require('dotenv').config();
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -47,13 +48,18 @@ async function main() {
     },
   });
 
-  await prisma.availability.create({
-    data: {
-      tutorId: tutor.id,
-      startTime: new Date(Date.now() + 48 * 60 * 60 * 1000),
-      endTime: new Date(Date.now() + 49 * 60 * 60 * 1000),
-    },
-  });
+  // A recurring weekly series, to show off "repeat weekly" + "remove series"
+  const recurrenceGroupId = crypto.randomUUID();
+  for (let i = 0; i < 4; i++) {
+    await prisma.availability.create({
+      data: {
+        tutorId: tutor.id,
+        startTime: new Date(Date.now() + (48 + i * 168) * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + (49 + i * 168) * 60 * 60 * 1000),
+        recurrenceGroupId,
+      },
+    });
+  }
 
   const pastSession = await prisma.tutorSession.create({
     data: {
@@ -63,6 +69,7 @@ async function main() {
       startTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       endTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
       status: 'COMPLETED',
+      location: 'Zoom: peerlink.zoom.us/j/demo123',
     },
   });
 
@@ -86,10 +93,29 @@ async function main() {
     },
   });
 
+  await prisma.resource.create({
+    data: {
+      uploaderId: tutor.id,
+      title: 'Recursion cheat sheet',
+      course: 'CS1102',
+      subject: 'Algorithms',
+      docType: 'PDF',
+      fileUrl: '/uploads/demo-recursion-notes.pdf',
+    },
+  });
+
+  await prisma.notification.createMany({
+    data: [
+      { userId: student.id, type: 'SESSION_COMPLETED', message: 'Session completed: Algorithms. Please leave a rating.', isRead: false },
+      { userId: tutor.id, type: 'NEW_BOOKING_REQUEST', message: 'You have a new booking request', isRead: true },
+    ],
+  });
+
   console.log('Seeded demo data:');
   console.log(`  Tutor login:   ${tutor.email} / Password123!`);
   console.log(`  Student login: ${student.email} / Password123!`);
   console.log(`  Open availability slot id: ${slot.id}`);
+  console.log(`  Recurring series id: ${recurrenceGroupId}`);
 }
 
 main()

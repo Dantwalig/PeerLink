@@ -6,6 +6,8 @@ export default function Sessions() {
   const [sessions, setSessions] = useState([]);
   const [error, setError] = useState('');
   const [ratingDraft, setRatingDraft] = useState({});
+  const [locationDraft, setLocationDraft] = useState({});
+  const [editingLocation, setEditingLocation] = useState(null);
 
   function load() {
     api('/sessions/mine').then(setSessions).catch((err) => setError(err.message));
@@ -32,6 +34,19 @@ export default function Sessions() {
     }
   }
 
+  async function saveLocation(sessionId) {
+    try {
+      await api(`/sessions/${sessionId}/location`, {
+        method: 'PATCH',
+        body: JSON.stringify({ location: locationDraft[sessionId] || '' }),
+      });
+      setEditingLocation(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div>
       <h1>My sessions</h1>
@@ -48,6 +63,25 @@ export default function Sessions() {
             <p className="muted">
               {s.student.name} ↔ {s.tutor.name} · {new Date(s.startTime).toLocaleString()}
             </p>
+
+            {s.status === 'CONFIRMED' && editingLocation !== s.id && (
+              <p className="muted">
+                📍 {s.location || 'No location set yet'}{' '}
+                <a href="#" onClick={(e) => { e.preventDefault(); setLocationDraft({ ...locationDraft, [s.id]: s.location || '' }); setEditingLocation(s.id); }}>
+                  (edit)
+                </a>
+              </p>
+            )}
+            {editingLocation === s.id && (
+              <div className="row" style={{ marginBottom: 6 }}>
+                <input
+                  placeholder="Zoom link, or e.g. Library, 2nd floor"
+                  value={locationDraft[s.id] || ''}
+                  onChange={(e) => setLocationDraft({ ...locationDraft, [s.id]: e.target.value })}
+                />
+                <button onClick={() => saveLocation(s.id)}>Save</button>
+              </div>
+            )}
 
             {s.status === 'CONFIRMED' && (
               <div className="row">
