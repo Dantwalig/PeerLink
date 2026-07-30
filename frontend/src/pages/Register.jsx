@@ -11,6 +11,7 @@ export default function Register() {
   const [registered, setRegistered] = useState(false);
   const [devLink, setDevLink] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -63,7 +64,19 @@ export default function Register() {
         <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@alueducation.com" />
 
         <label>Password</label>
-        <input required type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            required
+            type={showPassword ? 'text' : 'password'}
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            style={{ flex: 1 }}
+          />
+          <button type="button" className="secondary" onClick={() => setShowPassword((s) => !s)}>
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
 
         <label>Faculty</label>
         <input value={form.faculty} onChange={(e) => setForm({ ...form, faculty: e.target.value })} />

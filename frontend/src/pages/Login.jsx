@@ -9,6 +9,7 @@ export default function Login() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -46,7 +47,18 @@ export default function Login() {
         <label>Email</label>
         <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <label>Password</label>
-        <input required type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            required
+            type={showPassword ? 'text' : 'password'}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            style={{ flex: 1 }}
+          />
+          <button type="button" className="secondary" onClick={() => setShowPassword((s) => !s)}>
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
         {error && <p className="error">{error}</p>}
         {needsVerification && (
           <button type="button" className="secondary" onClick={resendVerification}>Resend verification link</button>
