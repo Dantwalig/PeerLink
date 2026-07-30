@@ -62,7 +62,7 @@ export default function App() {
               <Link to="/messages">Messages</Link>
               <Link to="/notifications">Notifications{unread > 0 ? ` (${unread})` : ''}</Link>
               {user.role === 'ADMIN' && <Link to="/admin">Admin</Link>}
-              <button onClick={logout}>Log out ({user.name.split(' ')[0]})</button>
+              <button onClick={logout}>Log out ({(user.name || 'you').split(' ')[0]})</button>
             </>
           ) : (
             <>
