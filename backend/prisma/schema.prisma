@@ -29,7 +29,8 @@ model User {
   passwordHash   String
   role           String   @default("STUDENT") // STUDENT | ADMIN
   isTutor        Boolean  @default(false)
-  isVerified     Boolean  @default(false)
+  isVerified     Boolean  @default(false) // email verified (FR1.1)
+  tutorVerified  Boolean  @default(false) // admin has approved this person as a tutor (FR3, Platform Administrator role)
   verificationToken  String? @unique
   resetToken         String? @unique
   resetTokenExpiry   DateTime?

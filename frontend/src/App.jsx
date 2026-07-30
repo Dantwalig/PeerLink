@@ -13,10 +13,18 @@ import Groups from './pages/Groups';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
 import CalendarView from './pages/CalendarView';
+import AdminPanel from './pages/AdminPanel';
 
 function RequireAuth({ children }) {
   const user = getUser();
   if (!user) return <Login />;
+  return children;
+}
+
+function RequireAdmin({ children }) {
+  const user = getUser();
+  if (!user) return <Login />;
+  if (user.role !== 'ADMIN') return <p className="error">Admins only.</p>;
   return children;
 }
 
@@ -53,6 +61,7 @@ export default function App() {
               <Link to="/groups">Study groups</Link>
               <Link to="/messages">Messages</Link>
               <Link to="/notifications">Notifications{unread > 0 ? ` (${unread})` : ''}</Link>
+              {user.role === 'ADMIN' && <Link to="/admin">Admin</Link>}
               <button onClick={logout}>Log out ({user.name.split(' ')[0]})</button>
             </>
           ) : (
@@ -78,6 +87,7 @@ export default function App() {
           <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+          <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
         </Routes>
       </div>
     </div>

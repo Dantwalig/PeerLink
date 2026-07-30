@@ -17,11 +17,43 @@ async function main() {
       passwordHash,
       isTutor: true,
       isVerified: true,
+      tutorVerified: true, // admin-approved, so she shows up in search
       faculty: 'Computer Science',
       yearOfStudy: 3,
       subjects: 'Data Structures, Algorithms, Web Development',
       bio: 'Peer tutor for CS core courses. 20+ sessions completed.',
       rating: 4.8,
+    },
+  });
+
+  // Deliberately NOT admin-verified yet, so the admin panel has something
+  // real to demo: approve him live and watch him appear in search.
+  const pendingTutor = await prisma.user.upsert({
+    where: { email: `peter.ndayishimiye@${domain}` },
+    update: {},
+    create: {
+      name: 'Peter Ndayishimiye',
+      email: `peter.ndayishimiye@${domain}`,
+      passwordHash,
+      isTutor: true,
+      isVerified: true,
+      tutorVerified: false,
+      faculty: 'Computer Science',
+      yearOfStudy: 4,
+      subjects: 'Databases, Algorithms',
+      bio: 'New peer tutor, awaiting admin approval.',
+    },
+  });
+
+  const admin = await prisma.user.upsert({
+    where: { email: `admin@${domain}` },
+    update: {},
+    create: {
+      name: 'Platform Admin',
+      email: `admin@${domain}`,
+      passwordHash,
+      role: 'ADMIN',
+      isVerified: true,
     },
   });
 
@@ -116,7 +148,9 @@ async function main() {
 
   console.log('Seeded demo data:');
   console.log(`  Tutor login:   ${tutor.email} / Password123!`);
+  console.log(`  Pending tutor: ${pendingTutor.email} / Password123! (not yet admin-verified)`);
   console.log(`  Student login: ${student.email} / Password123!`);
+  console.log(`  Admin login:   ${admin.email} / Password123!`);
   console.log(`  Open availability slot id: ${slot.id}`);
   console.log(`  Recurring series id: ${recurrenceGroupId}`);
 }

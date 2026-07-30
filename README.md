@@ -104,6 +104,15 @@ more manually swapping connection strings for migrations.
   session, plus the built-in `/calendar` month view described above.
 - **Resend-verification flow** - if a verification email expires or gets
   lost, the Login page offers to send a fresh one.
+- **Admin panel** (`/admin`, ADMIN role only) - platform-wide stats, a
+  tutor-verification queue, and basic resource moderation. Fulfills the
+  SRS's Platform Administrator user class, which previously had no UI at
+  all. Tutor verification is now genuinely load-bearing, not cosmetic:
+  `isTutor` is self-declared at registration, but a new tutor's
+  `tutorVerified` flag stays `false` until an admin approves them, and
+  **unverified tutors don't appear in student search** until they are.
+  Their own profile page still resolves via direct link, with a "pending
+  admin verification" notice instead of hiding entirely.
 
 ## Setup (do this tonight, not tomorrow morning)
 
@@ -133,8 +142,10 @@ npm run dev                  # http://localhost:5173
 ```
 
 ### 4. Demo logins (from the seed script)
-- Tutor: `grace.uwase@alueducation.com` / `Password123!`
+- Tutor (verified): `grace.uwase@alueducation.com` / `Password123!`
+- Tutor (pending admin approval): `peter.ndayishimiye@alueducation.com` / `Password123!`
 - Student: `jean.mugisha@alueducation.com` / `Password123!`
+- Admin: `admin@alueducation.com` / `Password123!`
 
 Registration requires an `@alueducation.com` email by default - change
 `INSTITUTIONAL_EMAIL_DOMAIN` in `backend/.env` if your cohort uses a
@@ -160,6 +171,9 @@ local dev and grading, real email needs the key configured.
 8. Upload a **resource**, show course autocomplete, and download it back.
 9. Create a **study group** and have the other account request to join (FR7).
 10. Open **Notifications** and show the unread badge clearing.
+11. Log in as **admin** (`admin@alueducation.com`), open `/admin`, and
+    approve Peter's pending tutor verification live - then switch back to
+    the student account and show him now appearing in search.
 
 ## Honest next steps (good to mention if asked)
 
@@ -176,12 +190,6 @@ local dev and grading, real email needs the key configured.
 
 A few ideas worth considering for a future iteration, roughly in order of
 effort vs. payoff:
-- **Admin panel** - the SRS defines a Platform Administrator user class,
-  but there's no admin UI yet to verify tutors, moderate content, or see
-  platform-wide stats.
-- **Tutor verification badge** - `isTutor` is currently self-declared at
-  registration; a real "pending → admin-approved" flow would make
-  "Verified Tutor" meaningful rather than a checkbox.
 - **Smart tutor matching** - suggest tutors based on a student's own
   subjects/faculty instead of pure search; a good SQL query dressed up as
   a feature, not real ML, but demos well.

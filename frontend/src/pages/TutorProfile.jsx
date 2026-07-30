@@ -33,8 +33,13 @@ export default function TutorProfile() {
 
   return (
     <div>
-      <h1>{tutor.name}</h1>
+      <h1>{tutor.name} {tutor.tutorVerified && <span className="badge">✓ Verified tutor</span>}</h1>
       <p className="subtitle">{tutor.faculty} · Year {tutor.yearOfStudy} · ★ {tutor.rating.toFixed(1)}</p>
+      {!tutor.tutorVerified && (
+        <p className="muted" style={{ marginBottom: 16 }}>
+          This tutor is awaiting admin verification and won't yet appear in search results.
+        </p>
+      )}
       <div className="card">
         <strong>About</strong>
         <p className="muted">{tutor.bio || 'No bio yet.'}</p>

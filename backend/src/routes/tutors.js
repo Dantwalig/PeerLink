@@ -5,7 +5,9 @@ const { requireAuth, requireTutor } = require('../middleware/auth');
 
 const router = express.Router();
 
-// FR3 Tutor Search - by subject, faculty, availability, minimum rating
+// FR3 Tutor Search - by subject, faculty, availability, minimum rating.
+// Only admin-verified tutors are searchable (see routes/admin.js) - this is
+// what makes tutorVerified meaningful rather than a cosmetic flag.
 router.get('/search', requireAuth, async (req, res) => {
   const { subject, faculty, minRating } = req.query;
 
@@ -13,6 +15,7 @@ router.get('/search', requireAuth, async (req, res) => {
     where: {
       isTutor: true,
       isVerified: true,
+      tutorVerified: true,
       ...(subject && { subjects: { contains: subject, mode: 'insensitive' } }),
       ...(faculty && { faculty: { contains: faculty, mode: 'insensitive' } }),
       ...(minRating && { rating: { gte: Number(minRating) } }),
@@ -27,12 +30,15 @@ router.get('/search', requireAuth, async (req, res) => {
   res.json(tutors);
 });
 
-// FR3.1 Tutor Profile View - full profile, open slots, and reviews
+// FR3.1 Tutor Profile View - full profile, open slots, and reviews.
+// Not gated on tutorVerified - a direct link still resolves, but the
+// frontend shows a "pending admin verification" notice if it's not yet approved.
 router.get('/:id', requireAuth, async (req, res) => {
   const tutor = await prisma.user.findUnique({
     where: { id: req.params.id },
     select: {
       id: true, name: true, faculty: true, yearOfStudy: true, subjects: true, bio: true, rating: true,
+      isTutor: true, tutorVerified: true,
       availability: { where: { isBooked: false, startTime: { gte: new Date() } }, orderBy: { startTime: 'asc' } },
       ratingsReceived: {
         select: { score: true, comment: true, createdAt: true, fromUser: { select: { name: true } } },
@@ -40,7 +46,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       },
     },
   });
-  if (!tutor) return res.status(404).json({ message: 'Tutor not found' });
+  if (!tutor || !tutor.isTutor) return res.status(404).json({ message: 'Tutor not found' });
   res.json(tutor);
 });
 

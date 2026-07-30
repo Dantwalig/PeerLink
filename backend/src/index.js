@@ -15,6 +15,7 @@ const ratingRoutes = require('./routes/ratings');
 const messageRoutes = require('./routes/messages');
 const dashboardRoutes = require('./routes/dashboard');
 const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const server = http.createServer(app);
@@ -55,6 +56,7 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Central error handler - never leak stack traces or raw Prisma errors to the client
 app.use((err, req, res, next) => {

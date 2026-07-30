@@ -83,6 +83,9 @@ export default function Register() {
           <>
             <label>Short bio</label>
             <textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+            <p className="muted">
+              An admin needs to verify your tutor profile before it appears in student search — usually quick, but not instant.
+            </p>
           </>
         )}
 
