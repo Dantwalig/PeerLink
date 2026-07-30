@@ -3,7 +3,6 @@ require('express-async-errors');
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const path = require('path');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 
@@ -44,7 +43,6 @@ app.set('io', io);
 
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'))); // STUB for S3-served files
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

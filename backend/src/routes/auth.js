@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../lib/prisma');
-const { sendEmail } = require('../lib/email');
+const { sendEmail, getAppUrl, verificationEmailHtml, resetPasswordEmailHtml } = require('../lib/email');
 const { clean } = require('../lib/sanitize');
 
 const router = express.Router();
@@ -67,14 +67,44 @@ router.post('/register', async (req, res) => {
   });
 
   // FR1.1 Email Verification - account stays inactive until the link is clicked
-  const verifyUrl = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}`;
-  await sendEmail(user.email, 'Verify your PeerLink account', `Click to verify: ${verifyUrl}`);
+  const verifyUrl = `${getAppUrl()}/verify?token=${verificationToken}`;
+  const emailResult = await sendEmail({
+    to: user.email,
+    subject: 'Verify your PeerLink account',
+    html: verificationEmailHtml({ name: user.name, link: verifyUrl }),
+  });
 
   res.status(201).json({
     message: 'Account created. Check your email to verify before logging in.',
-    // Exposed here only because there's no real inbox in a local demo -
-    // in production this would never be returned to the client.
-    devVerificationUrl: verifyUrl,
+    // Only present when Resend isn't configured (no RESEND_API_KEY) - there's
+    // no real inbox to check in that case, so the link is handed back
+    // directly instead. Never present once real email is sending.
+    devVerificationUrl: emailResult.sent ? undefined : verifyUrl,
+  });
+});
+
+// FR1.1 Email Verification - issue a fresh link if the original expired,
+// was lost, or landed in spam. Doesn't reveal whether the account exists.
+router.post('/verify/resend', async (req, res) => {
+  const { email } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || user.isVerified) {
+    return res.json({ message: 'If that account exists and needs verifying, a new link has been sent' });
+  }
+
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  await prisma.user.update({ where: { id: user.id }, data: { verificationToken } });
+
+  const verifyUrl = `${getAppUrl()}/verify?token=${verificationToken}`;
+  const emailResult = await sendEmail({
+    to: user.email,
+    subject: 'Verify your PeerLink account',
+    html: verificationEmailHtml({ name: user.name, link: verifyUrl }),
+  });
+
+  res.json({
+    message: 'If that account exists and needs verifying, a new link has been sent',
+    devVerificationUrl: emailResult.sent ? undefined : verifyUrl,
   });
 });
 
@@ -121,10 +151,17 @@ router.post('/password-reset/request', async (req, res) => {
     data: { resetToken, resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000) },
   });
 
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-  await sendEmail(user.email, 'Reset your PeerLink password', `Click to reset: ${resetUrl}`);
+  const resetUrl = `${getAppUrl()}/reset-password?token=${resetToken}`;
+  const emailResult = await sendEmail({
+    to: user.email,
+    subject: 'Reset your PeerLink password',
+    html: resetPasswordEmailHtml({ name: user.name, link: resetUrl }),
+  });
 
-  res.json({ message: 'If that account exists, a reset link has been sent', devResetUrl: resetUrl });
+  res.json({
+    message: 'If that account exists, a reset link has been sent',
+    devResetUrl: emailResult.sent ? undefined : resetUrl,
+  });
 });
 
 router.post('/password-reset/confirm', async (req, res) => {

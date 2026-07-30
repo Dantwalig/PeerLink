@@ -2,15 +2,23 @@
 // Modeled directly from the SRS: FR1-FR10 (registration, auth, tutor search,
 // session booking, resource sharing, messaging, study groups, ratings,
 // notifications, dashboard) and section 2.4 Operating Environment
-// (PostgreSQL v14+ for relational data, AWS S3 for file storage).
+// (PostgreSQL v14+ for relational data). File storage lives in Postgres
+// itself (see Resource model) rather than AWS S3 - see README "Changes from
+// the SRS" for why.
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// directUrl is Prisma's official fix for the Supabase PgBouncer issue: the
+// app runs on the pooled connection (DATABASE_URL, port 6543) for normal
+// queries, while `prisma migrate`/`db push` automatically use the direct,
+// non-pooled connection (DIRECT_URL, port 5432) instead - no manual
+// connection-string swapping needed at migration time.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // FR2.2 Role-Based Access: a user can be a learner and a tutor at once (isTutor flag)
@@ -68,12 +76,15 @@ model TutorSession {
   endTime       DateTime
   status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
   location      String?  // Zoom/Meet link or a physical location, e.g. "Library, 2nd floor"
-  calendarEventId String?  // FR4.2 stub - would hold the Google Calendar event id
   createdAt     DateTime @default(now())
   rating        Rating?
 }
 
-// FR5 Resource Sharing
+// FR5 Resource Sharing - file bytes live in Postgres (Bytes/bytea) rather
+// than local disk or S3, so uploads survive redeploys on hosts with an
+// ephemeral filesystem (Render/Railway free tiers). Fine at student-project
+// scale; if this ever needs to hold thousands of large files, move to S3 or
+// Supabase Storage and keep only a reference here instead.
 model Resource {
   id          String   @id @default(uuid())
   uploaderId  String
@@ -82,7 +93,9 @@ model Resource {
   course      String
   subject     String
   docType     String   // PDF | DOCX | IMAGE
-  fileUrl     String   // STUB: in production this is an S3 URL; demo stores a placeholder
+  mimeType    String
+  sizeBytes   Int
+  data        Bytes    // the actual file content, stored in the database
   createdAt   DateTime @default(now())
 }
 

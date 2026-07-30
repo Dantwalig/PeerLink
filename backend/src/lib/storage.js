@@ -1,18 +1,16 @@
 /**
- * STUB: AWS S3 API (SRS 3.3 Software Interfaces, FR5).
- * Files are written to local disk (backend/uploads) instead of S3, and the
- * returned "fileUrl" is a local path. Multer enforces the 50MB limit and
- * PDF/DOCX/PNG/JPEG-only restriction from NFR5 either way.
+ * File uploads are held in memory just long enough for the route handler to
+ * write the bytes into Postgres (see routes/resources.js) - nothing touches
+ * local disk, so there's nothing for an ephemeral filesystem to lose on
+ * redeploy. Multer enforces the 50MB limit and PDF/DOCX/PNG/JPEG-only
+ * restriction from NFR5.
  *
- * To go live: swap the multer diskStorage engine below for
- * multer-s3 pointed at AWS_S3_BUCKET.
+ * If this ever needs to scale past student-project volume, swap
+ * multer.memoryStorage() for multer-s3 and stop storing `data` on Resource -
+ * everything downstream (the /download route) only needs to change its one
+ * data source, not its API shape.
  */
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-fs.mkdirSync(uploadDir, { recursive: true });
 
 const ALLOWED = {
   'application/pdf': 'PDF',
@@ -21,13 +19,8 @@ const ALLOWED = {
   'image/jpeg': 'IMAGE',
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // NFR5: max 50MB per file
   fileFilter: (req, file, cb) => {
     if (!ALLOWED[file.mimetype]) {

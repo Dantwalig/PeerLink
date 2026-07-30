@@ -12,6 +12,7 @@ import Resources from './pages/Resources';
 import Groups from './pages/Groups';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
+import CalendarView from './pages/CalendarView';
 
 function RequireAuth({ children }) {
   const user = getUser();
@@ -47,6 +48,7 @@ export default function App() {
               <Link to="/dashboard">Dashboard</Link>
               <Link to="/tutors">Find a tutor</Link>
               <Link to="/sessions">My sessions</Link>
+              <Link to="/calendar">Calendar</Link>
               <Link to="/resources">Resources</Link>
               <Link to="/groups">Study groups</Link>
               <Link to="/messages">Messages</Link>
@@ -71,6 +73,7 @@ export default function App() {
           <Route path="/tutors" element={<RequireAuth><TutorSearch /></RequireAuth>} />
           <Route path="/tutors/:id" element={<RequireAuth><TutorProfile /></RequireAuth>} />
           <Route path="/sessions" element={<RequireAuth><Sessions /></RequireAuth>} />
+          <Route path="/calendar" element={<RequireAuth><CalendarView /></RequireAuth>} />
           <Route path="/resources" element={<RequireAuth><Resources /></RequireAuth>} />
           <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />

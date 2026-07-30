@@ -1,7 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const { requireAuth } = require('../middleware/auth');
-const { createCalendarEvent } = require('../lib/calendar');
+const { buildSessionICS } = require('../lib/calendar');
 const { notify } = require('../lib/push');
 
 const router = express.Router();
@@ -32,14 +32,29 @@ router.post('/', requireAuth, async (req, res) => {
     prisma.availability.update({ where: { id: availabilityId }, data: { isBooked: true } }),
   ]);
 
-  // FR4.2 Calendar Integration (stubbed)
-  const calendarEventId = await createCalendarEvent(session);
-  await prisma.tutorSession.update({ where: { id: session.id }, data: { calendarEventId } });
-
   await notify(tutorId, 'SESSION_CONFIRMED', `New session booked: ${subject}`);
   await notify(req.user.userId, 'SESSION_CONFIRMED', `Your session "${subject}" is confirmed`);
 
   res.status(201).json(session);
+});
+
+// FR4.2 Calendar Integration - downloads a real .ics file for this session,
+// which any calendar app (Google Calendar, Outlook, Apple Calendar) can
+// import via its own "Add from file"/drag-and-drop, no OAuth required.
+router.get('/:id/calendar.ics', requireAuth, async (req, res) => {
+  const session = await prisma.tutorSession.findUnique({
+    where: { id: req.params.id },
+    include: { student: { select: { name: true } }, tutor: { select: { name: true } } },
+  });
+  if (!session) return res.status(404).json({ message: 'Session not found' });
+  if (![session.studentId, session.tutorId].includes(req.user.userId)) {
+    return res.status(403).json({ message: 'You are not part of this session' });
+  }
+
+  const ics = buildSessionICS(session);
+  res.set('Content-Type', 'text/calendar; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="peerlink-session-${session.id}.ics"`);
+  res.send(ics);
 });
 
 // Either party can set/update where the session happens (Zoom link, room, etc.)

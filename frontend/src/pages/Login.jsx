@@ -6,11 +6,15 @@ export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
+    setResendMessage('');
+    setNeedsVerification(false);
     setLoading(true);
     try {
       const res = await api('/auth/login', { method: 'POST', body: JSON.stringify(form) });
@@ -19,8 +23,19 @@ export default function Login() {
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
+      if (err.message.toLowerCase().includes('verify your email')) setNeedsVerification(true);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resendVerification() {
+    setResendMessage('');
+    try {
+      const res = await api('/auth/verify/resend', { method: 'POST', body: JSON.stringify({ email: form.email }) });
+      setResendMessage(res.devVerificationUrl ? `Dev mode - verify here: ${res.devVerificationUrl}` : "Sent! Check your inbox.");
+    } catch (err) {
+      setResendMessage(err.message);
     }
   }
 
@@ -33,6 +48,10 @@ export default function Login() {
         <label>Password</label>
         <input required type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         {error && <p className="error">{error}</p>}
+        {needsVerification && (
+          <button type="button" className="secondary" onClick={resendVerification}>Resend verification link</button>
+        )}
+        {resendMessage && <p className="success">{resendMessage}</p>}
         <button disabled={loading} type="submit">{loading ? 'Logging in...' : 'Log in'}</button>
       </form>
       <p className="muted" style={{ marginTop: 12 }}>No account yet? <Link to="/register">Register</Link></p>

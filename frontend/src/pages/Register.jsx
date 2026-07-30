@@ -8,6 +8,7 @@ export default function Register() {
     name: '', email: '', password: '', isTutor: false, faculty: '', yearOfStudy: '', subjects: '', bio: '',
   });
   const [error, setError] = useState('');
+  const [registered, setRegistered] = useState(false);
   const [devLink, setDevLink] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +18,8 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await api('/auth/register', { method: 'POST', body: JSON.stringify(form) });
-      setDevLink(res.devVerificationUrl);
+      setRegistered(true);
+      setDevLink(res.devVerificationUrl || '');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -25,15 +27,26 @@ export default function Register() {
     }
   }
 
-  if (devLink) {
+  if (registered) {
     return (
       <div>
         <h1>Almost there</h1>
-        <p className="subtitle">A verification email was sent (stubbed - SendGrid isn't wired up yet).</p>
-        <div className="card">
-          <p>For this demo, click below to verify instantly instead of checking a real inbox:</p>
-          <a href={devLink}><button>Verify my email</button></a>
-        </div>
+        {devLink ? (
+          <>
+            <p className="subtitle">Email sending isn't configured yet in this environment.</p>
+            <div className="card">
+              <p>For this demo, click below to verify instantly instead of checking a real inbox:</p>
+              <a href={devLink}><button>Verify my email</button></a>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="subtitle">Check your inbox — we've sent a verification link to {form.email}.</p>
+            <p className="muted">
+              Didn't get it? <Link to="/login">Go to login</Link> and use "Resend verification link".
+            </p>
+          </>
+        )}
       </div>
     );
   }

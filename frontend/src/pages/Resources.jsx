@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { api, getToken } from '../lib/api';
 
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function Resources() {
   const [resources, setResources] = useState([]);
@@ -10,6 +16,7 @@ export default function Resources() {
   const [filterCourse, setFilterCourse] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
 
   function load(course) {
     const params = course ? `?course=${encodeURIComponent(course)}` : '';
@@ -47,6 +54,32 @@ export default function Resources() {
   function onFilterChange(value) {
     setFilterCourse(value);
     load(value);
+  }
+
+  // Download requires the auth token, which a plain <a href> can't send -
+  // fetch the bytes as a blob and trigger the save via a temporary link.
+  async function download(resource) {
+    setError('');
+    setDownloadingId(resource.id);
+    try {
+      const res = await fetch(`${API_URL}/resources/${resource.id}/download`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resource.title;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   return (
@@ -95,8 +128,10 @@ export default function Resources() {
             <strong>{r.title}</strong>
             <span className="badge">{r.docType}</span>
           </div>
-          <p className="muted">{r.course} · {r.subject} · uploaded by {r.uploader.name}</p>
-          <a href={`${API_ORIGIN}${r.fileUrl}`} target="_blank" rel="noreferrer"><button className="secondary">Download</button></a>
+          <p className="muted">{r.course} · {r.subject} · {formatSize(r.sizeBytes)} · uploaded by {r.uploader.name}</p>
+          <button className="secondary" disabled={downloadingId === r.id} onClick={() => download(r)}>
+            {downloadingId === r.id ? 'Downloading...' : 'Download'}
+          </button>
         </div>
       ))}
     </div>

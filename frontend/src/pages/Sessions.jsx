@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, getUser } from '../lib/api';
+import { api, getUser, getToken } from '../lib/api';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export default function Sessions() {
   const user = getUser();
@@ -47,6 +49,29 @@ export default function Sessions() {
     }
   }
 
+  // Downloads a real .ics file (see backend lib/calendar.js) - works with
+  // Google Calendar, Outlook, Apple Calendar, or anything else, no OAuth.
+  async function addToCalendar(sessionId) {
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/sessions/${sessionId}/calendar.ics`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error('Could not generate calendar file');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `peerlink-session-${sessionId}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div>
       <h1>My sessions</h1>
@@ -85,6 +110,7 @@ export default function Sessions() {
 
             {s.status === 'CONFIRMED' && (
               <div className="row">
+                <button className="secondary" onClick={() => addToCalendar(s.id)}>Add to calendar</button>
                 <button className="secondary" onClick={() => cancel(s.id)}>Cancel</button>
                 {isTutor && <button onClick={() => complete(s.id)}>Mark completed</button>}
               </div>

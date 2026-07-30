@@ -93,6 +93,7 @@ async function main() {
     },
   });
 
+  const demoPdfBytes = Buffer.from('%PDF-1.4\n% Demo placeholder PDF for PeerLink seed data\n', 'utf-8');
   await prisma.resource.create({
     data: {
       uploaderId: tutor.id,
@@ -100,7 +101,9 @@ async function main() {
       course: 'CS1102',
       subject: 'Algorithms',
       docType: 'PDF',
-      fileUrl: '/uploads/demo-recursion-notes.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: demoPdfBytes.length,
+      data: demoPdfBytes,
     },
   });
 
